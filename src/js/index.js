@@ -1,3 +1,9 @@
+/* jshint debug: true */
+
+
+
+
+
 /*******************************************************************************
 Main control script
 
@@ -29,28 +35,41 @@ var
 Backbone.$ = $;
 
 $.fn.glowEffect = function(start, end, duration) {
-    var $this = this;
-    return this.animate({
-        a: end
-    }, {
-        duration: duration / 2,
-        step: function(now) {
-            $this.css("box-shadow", "0px 0px " + now +
-                "px " + $this.css('background-color'));
-        }
-    }).animate({
-        a: start
-    }, {
-        duration: duration / 2,
-        step: function(now) {
-            $this.css("box-shadow", "0px 0px " + now +
-                "px " + $this.css('background-color'));
-        }
-    });
-
+    var 
+        self = this,
+        animation = {
+            duration: duration / 2,
+            step: glow
+        };
+    
+    function glow(now) {
+        self.css(
+            "box-shadow", "0px 0px " + 
+            now +
+            "px " + 
+            self.css('background-color'));
+    }
+    
+    return this
+        .animate({
+            a: end
+        }, animation)
+        .animate({
+            a: start
+        }, animation);
 };
 
+
+function randomColor() {
+    return Math.floor(Math.random() *
+                    16777215).toString(16);
+}
+
+
+
+
 log.setLevel('debug');
+console.log(global);
 
 var
     ControlsView = require('./ControlsView.js');
@@ -92,16 +111,16 @@ var StructureModel = Backbone.Model.extend({
         width: 1,
         height: 1,
         timeout: 3000,
-        parent: null,
+        parentmodel: null,
         view: null,
-        produced: 1
+        produced: 0
     },
     initialize: function() {
         log.debug('StructureModel.initialize');
-        this.set('view', new StructureView({
+        this.set({
+            'view': new StructureView({
             model: this
-        }));
-        this.get('view').render();
+        })},{silent: true});
     },
     start: function() {
         log.debug('StructureModel.start');
@@ -123,33 +142,24 @@ var StructureView = Backbone.View.extend({
     className: 'structure',
     initialize: function() {
         log.debug('StructureView.initialize');
-        this.listenTo(this.model.get('parent'), 'render',
-            this.render);
-        this.listenTo(this.model, "change", this.flash);
+        this.listenTo(this.model, "change:produced", this.flash);
+        this.listenTo(this.model, "change:color", this.render);
+        this.produced_label = this.$el.html('<p class="produced"></p>');
     },
     render: function() {
         log.debug('StructureView.render');
-        this.model.trigger('render');
         this.$el.css('background-color', this.model.get(
             'color'));
-        // this.$el.css('width', this.model.get(
-        //     'width') + 'em');
-        // this.$el.css('height', this.model.get(
-        //     'height') + 'em');
-        this.model.get('parent').get('view').$el.append(this.$el);
+        this.produced_label.text(this.model.get('produced'));
+        this.model.get('parentmodel').get('view').$el.append(this.$el);
     },
     events: {
-        'click': 'fadeToggle',
         'dblclick': 'report'
     },
     flash: function() {
-        log.info('flash');
+        log.debug('StructureView.flash');
         this.$el.glowEffect(0, 40, 250);
-    },
-    fadeToggle: function(e) {
-        // if ('undefined' !== typeof(e)) {
-        //     e.stopPropagation();
-        // }
+        this.produced_label.text(this.model.get('produced'));
     },
     report: function() {
         log.info(this.model.attributes);
@@ -160,49 +170,40 @@ var StructureView = Backbone.View.extend({
 var world = new WorldModel();
 
 
+
 var StructureCollection = Backbone.Collection.extend({
     model: StructureModel,
+    running: false,
     initialize: function() {
         var self = this;
-        this.listenTo(controls, 'add', this.add);
-        this.listenTo(controls, 'startstop', this.startstop);
         this.on('add', function(o) {
             o.set({
-                'color': Math.floor(Math.random() *
-                    16777215).toString(16),
-                parent: world
+                'color': randomColor()
             });
             o.listenTo(self, 'start', o.start);
-            //o.start();
+            o.listenTo(self, 'stop', o.stop);
+            if (self.running) {
+                o.start();
+            }
         });
     },
     startstop: function() {
-        log.debug('StructureCollection.start');
-        this.trigger('start');
+        this.running = !this.running;
+        var verb = this.running ? 'start' : 'stop';
+        log.debug('StructureCollection.startstop [' + verb +']');
+        this.trigger(verb);
     }
 });
 
 
 
 var structures = new StructureCollection();
-structures.add({
-    parent: world
-});
-
-structures.add({
-    parent: world,
-});
-structures.add({
-    parent: world,
-});
-structures.add({
-    parent: world,
-});
+structures.add({parentmodel: world});
 
 world.trigger('render');
+
+// Explicitly bind the controls view.
 structures.listenTo(controls, 'startstop', structures.startstop);
 structures.listenTo(controls, 'add', function() {
-    structures.add({
-        parent: world
-    });
+    structures.add({parentmodel: world});
 });

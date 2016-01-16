@@ -1,9 +1,13 @@
+
+
+
 var
     log = require('loglevel'),
     $ = require('jquery'),
     _ = require('underscore'),
     Backbone = require('backbone');
-
+    
+var startstop_state = true;
 
 var ControlsView = Backbone.View.extend({
     template: $('#controls_tpl').html(),
@@ -19,9 +23,12 @@ var ControlsView = Backbone.View.extend({
         'click #startstop': 'startstop',
         'click #add': 'add'
     },
-    startstop: function() {
+    startstop: function(e) {
+        startstop_state = !startstop_state;
+        var verb = startstop_state ? 'Start': 'Stop';
         log.debug('ControlsView.startstop');
         this.trigger('startstop');
+        if (e) $(e.currentTarget).val(verb);
     },
     add: function() {
         log.debug('ControlsView.add');

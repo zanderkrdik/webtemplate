@@ -1,8 +1,17 @@
 module.exports = function(grunt) {
 
-
     grunt.initConfig({
         pkg: grunt.file.readJSON('package.json'),
+        sass: {                              // Task
+    dist: {                            // Target
+      options: {                       // Target options
+        style: 'expanded'
+      },
+      files: {                         // Dictionary of files
+        'build/main.css': 'src/sass/main.scss',
+      }
+    }
+  },
         jshint: {
             files: [
                 'package.json',
@@ -11,6 +20,12 @@ module.exports = function(grunt) {
                 'test/**/*.js',
                 'src/**/*.js'
             ],
+            options: {
+                globals: [
+                    'Backbone',
+                    '$'
+                ]
+            }
         },
         concat: {
             options: {
@@ -51,12 +66,6 @@ module.exports = function(grunt) {
                         dest: 'build/',
                         flatten: true
                     },
-                    {
-                        expand: true,
-                        src: ['src/css/*.css'],
-                        dest: 'build/',
-                        flatten: true
-                    },
 
                     // includes files within path and its sub-directories
                     //{expand: true, src: ['path/**'], dest: 'dest/'},
@@ -72,7 +81,7 @@ module.exports = function(grunt) {
     });
 
 
-
+grunt.loadNpmTasks('grunt-contrib-sass');
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-concat');
@@ -80,7 +89,7 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-browserify');
 
-    grunt.registerTask('default', ['clean', 'jshint', 'browserify', 'copy']);
+    grunt.registerTask('default', ['clean', 'jshint', 'browserify', 'sass', 'copy']);
     // grunt.registerTask('push', ['jshint', 'uglify', 'concat', 'sftp']);
     //grunt.registerTask('browser', ['browserify']);
 
